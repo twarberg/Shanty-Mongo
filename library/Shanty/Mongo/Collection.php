@@ -462,6 +462,7 @@ abstract class Shanty_Mongo_Collection
 		
 		$config = array();
         $config['fieldLimiting'] = static::$_fieldLimiting;
+        $config['requireType'] = static::$_requireType;
 		$config['new'] = ($new);
 		$config['hasId'] = true;
 		$config['connectionGroup'] = static::getConnectionGroupName();
@@ -929,6 +930,7 @@ abstract class Shanty_Mongo_Collection
     {
         $config = array();
         $config['fieldLimiting'] = static::$_fieldLimiting;
+        $config['requireType'] = static::$_requireType;
         $config['connectionGroup'] = static::getConnectionGroupName();
         $config['db'] = static::getDbName();
         $config['collection'] = static::getCollectionName();

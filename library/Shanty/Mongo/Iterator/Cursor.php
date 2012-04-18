@@ -78,6 +78,7 @@ class Shanty_Mongo_Iterator_Cursor implements OuterIterator
 	{
 		$config = array();
         $config['fieldLimiting'] = $this->_config['fieldLimiting'];
+        $config['requireType'] = $this->_config['requireType'];
 		$config['new'] = false;
 		$config['hasId'] = false;
 		$config['connectionGroup'] = $this->_config['connectionGroup'];
@@ -105,6 +106,7 @@ class Shanty_Mongo_Iterator_Cursor implements OuterIterator
 
 		$config                    = array();
         $config['fieldLimiting']   = $this->_config['fieldLimiting'];
+        $config['requireType']     = $this->_config['requireType'];
 		$config['new']             = false;
 		$config['hasKey']          = true;
 		$config['connectionGroup'] = $this->_config['connectionGroup'];

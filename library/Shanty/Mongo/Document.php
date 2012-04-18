@@ -23,6 +23,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 	protected $_cleanData = array();
 	protected $_config = array(
         'fieldLimiting' => false,
+        'requireType' => false,
 		'new' => true,
 		'connectionGroup' => null,
 		'db' => null,
@@ -85,9 +86,13 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		}
 		
 		// If has key then add it to the update criteria
-		if ($this->hasKey()) {
+		if ($this->hasKey())
 			$this->setCriteria($this->getPathToProperty('_id'), $this->getId());
-		}
+
+        /* i want this to be added in but other changes need to happen first */
+        //if($this->_config['requireType'] && $this->getInheritance())
+        //    $this->setCriteria($this->getPathToProperty('_type'), $this->getInheritance());
+
 		
 		$this->init();
 	}
@@ -639,7 +644,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 
             // Only failover to this if all else fails
 			// Load a document anyway so long as $data is not empty
-			if (!$className && !empty($data)) {
+			if (!$className && (!empty($data) && is_array($data))) {
 				$className = 'Shanty_Mongo_Document';
 			}
 			
@@ -818,7 +823,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 	 * 
 	 * @return array
 	 */
-	public function export()
+	public function export($applyOperations = false)
 	{
 		$exportData = $this->_cleanData;
 		
@@ -855,7 +860,11 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 			
 			$exportData[$property] = $value;
 		}
-		
+
+        /* allow the currently un-commited operations to be added to the exported data */
+        if($applyOperations)
+            $exportData = $this->applyOperation($exportData);
+
         /* if we did field limiting in our query, then we dont need to check requirements, we know we are already breaking them */
         if(!$this->_config['fieldLimiting'])
         {
@@ -942,7 +951,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
             if(is_array($oldValue) && is_array($newValue))
             {
                 if(json_encode($oldValue) !== json_encode($newValue))
-                    $this->addOperation('$set', $property, $newValue);
+                    $this->addOperation('$set', $property, $value);
 
             }
 			elseif ($newValue !== $oldValue)
@@ -1283,7 +1292,12 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 	}
 
     public function applyOperationToLocalInstance()
-                {
+    {
+        $this->_cleanData = $this->applyOperations($this->_cleanData);
+	}
+
+    public function applyOperations($applyTo)
+    {
         foreach($this->_operations as $operation => $operation_value)
         {
 
@@ -1292,42 +1306,43 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
                 case '$addToSet':
                     foreach($operation_value as $path => $value)
                     {
-                        if(!isset($this->_cleanData[$path]))
-                            $this->_cleanData[$path] = array();
+                        if(!isset($applyTo[$path]))
+                            $applyTo[$path] = array();
 
-                        $this->_cleanData[$path][] = $value;
+                        $applyTo[$path][] = $value;
                     }
 
-					break;
+                    break;
 
                 case '$inc':
                     foreach($operation_value as $path => $value)
                     {
-                        if(!isset($this->_cleanData[$path]))
-                            $this->_cleanData[$path] = 0;
+                        if(!isset($applyTo[$path]))
+                            $applyTo[$path] = 0;
 
-                        $this->_cleanData[$path] += $value;
-				}
+                        $applyTo[$path] += $value;
+                }
 
-				break;
+                break;
 
                 case '$set':
                     foreach($operation_value as $path => $value)
-                        $this->_cleanData[$path] = $value;
+                        $applyTo[$path] = $value;
 
                     break;
 
                 case '$unset':
                     foreach(array_keys($operation_value) as $path)
-                        if(isset($this->_cleanData[$path]))
-                            unset($this->_cleanData[$path]);
+                        if(isset($applyTo[$path]))
+                            unset($applyTo[$path]);
                 break;
                 default:
                     //die('We must add a way to process '.$operation.' back to the base object');
             }
-		}
-	}
-	
+        }
+        return $applyTo;
+    }
+
 	/**
 	 * Increment a property by a specified amount
 	 * 
