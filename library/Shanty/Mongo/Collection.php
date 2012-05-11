@@ -12,8 +12,9 @@ require_once 'Shanty/Mongo/Iterator/Cursor.php';
  * @license    New BSD License
  * @author     Coen Hyde
  */
-abstract class Shanty_Mongo_Collection
+abstract class Shanty_Mongo_Collection extends ArrayObject
 {
+	protected static $_custom_id_type = false;
 	protected static $_connectionGroup = 'default';
 	protected static $_db = null;
 	protected static $_collection = null;
@@ -239,7 +240,8 @@ abstract class Shanty_Mongo_Collection
             throw new Shanty_Mongo_Exception(get_parent_class(static::getDocumentClass(false)).' is not a document. Please extend Shanty_Mongo_Document');
         }
 
-        return get_parent_class(static::getDocumentClass(false));
+        $parentClass = get_parent_class(static::getDocumentClass(false));
+        return !preg_match('/[\_\\]Base[\_\\]/', $parentClass) ? $parentClass : null;
     }
 
 	/**
