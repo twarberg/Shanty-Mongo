@@ -12,8 +12,6 @@ require_once 'Shanty/Mongo/Iterator/Default.php';
  */
 class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAccess, Countable, IteratorAggregate
 {
-	protected static $_custom_id_type = false;
-
 	protected static $_requirements = array();
 
 	protected $_docRequirements = array();
@@ -57,7 +55,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		$this->applyRequirements($this->_config['requirementModifiers'], false);
 
 		if(static::$_custom_id_type !== true) {
-			$this->applyRequirements(array('_id' => 'Validator:MongoId'), false);
+			$this->applyRequirements(array('_id' => array('Validator:MongoId')), false);
 		}
 
 		// Store data
@@ -76,7 +74,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 				$this->_data['_id'] = new MongoId();
 			}
 			if(static::$_use_inheritance === true) {
-				$this->applyRequirements(array('_type' => 'Array'), false);
+				$this->applyRequirements(array('_type' => array('Array')), false);
 				$this->_data['_type'] = static::getCollectionInheritance();
 			}
 		}
@@ -649,6 +647,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		$config['hasId'] = $this->hasRequirement($property, 'hasId');
 
 		if (!$reference) {
+			$config['pathToParentDocument'] = $this->getPathToDocument();
 			$config['pathToDocument'] = $this->getPathToProperty($property);
 			$config['criteria'] = $this->getCriteria();
 			$config['rootDocument'] = $this->isRootDocument() ? $this : $this->getConfigAttribute('rootDocument');
@@ -734,6 +733,24 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		}
 
 		return false;
+	}
+
+	/**
+	 * Set properties from array
+	 * @param array $data
+	 * @return Shanty_Mongo_Document
+	 */
+	public function setArray(array $data)
+	{
+		foreach($data as $property => $value) {
+			$current = $this->getProperty($property);
+			if(is_array($value) && $current instanceof Shanty_Mongo_Document) {
+				$current->setArray($value);
+			} else {
+				$this->setProperty($property, $value);
+			}
+		}
+		return $this;
 	}
 
 	/**
@@ -858,6 +875,11 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		return $exportData;
 	}
 
+	public function toArray()
+	{
+		return $this->export();
+	}
+
 	/**
 	 * Is this document a new document
 	 *
@@ -961,6 +983,11 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 
 		$this->preSave();
 
+		$refresh = false;
+		if($this->isRootDocument()) {
+			$operations = $this->getOperations(true);
+			$refresh = !empty($operations);
+		}
 		$exportData = $this->export();
 
 		if ($this->isRootDocument() && ($this->isNewDocument() || $entierDocument)) {
@@ -995,8 +1022,12 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		}
 
 		$result = $this->_getMongoCollection(true)->update($this->getCriteria(), $operations, array('upsert' => true, 'safe' => $safe));
-		$this->_data = array();
-		$this->_cleanData = $exportData;
+		if($refresh) {
+			$this->refresh();
+		} else {
+			$this->_data = array();
+			$this->_cleanData = $exportData;
+		}
 		$this->purgeOperations(true);
 
 		// Run post hooks
@@ -1007,6 +1038,11 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 
 		// This is not a new document anymore
 		$this->setConfigAttribute('new', false);
+
+		// If has key then add it to the update criteria
+		if ($this->hasKey()) {
+			$this->setCriteria($this->getPathToProperty('_id'), $this->getId());
+		}
 
 		return $result;
 	}
@@ -1046,6 +1082,9 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 
 		if (!$this->isRootDocument()) {
 			$result = $mongoCollection->update($this->getCriteria(), array('$unset' => array($this->getPathToDocument() => 1)), array('safe' => $safe));
+			if($this->isParentDocumentSet()) {
+				$result = $result && $mongoCollection->update($this->getCriteria(), array('$pull' => array($this->getConfigAttribute('pathToParentDocument') => null)), array('safe' => $safe));
+			}
 		}
 		else {
 			$result = $mongoCollection->remove($this->getCriteria(), array('justOne' => true, 'safe' => $safe));
@@ -1055,6 +1094,22 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		$this->postDelete();
 
 		return $result;
+	}
+
+	public function refresh()
+	{
+		$query = array('_id' => $this->getId());
+		if(static::$_use_inheritance) {
+			$inheritance = static::getCollectionInheritance();
+			if (count($inheritance) > 1) {
+				$query['_type'] = $inheritance[0];
+			}
+		}
+
+		$data = static::getMongoCollection(false)->findOne($query);
+
+		$this->_data = array();
+		$this->_cleanData = $data;
 	}
 
 	/**

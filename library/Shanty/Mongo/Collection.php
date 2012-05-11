@@ -12,8 +12,9 @@ require_once 'Shanty/Mongo/Iterator/Cursor.php';
  * @license    New BSD License
  * @author     Coen Hyde
  */
-abstract class Shanty_Mongo_Collection
+abstract class Shanty_Mongo_Collection extends ArrayObject
 {
+	protected static $_custom_id_type = false;
 	protected static $_connectionGroup = 'default';
 	protected static $_db = null;
 	protected static $_collection = null;
@@ -470,7 +471,7 @@ abstract class Shanty_Mongo_Collection
 	public static function remove(array $criteria, array $options = array())
 	{
 		// if you want to remove a document by MongoId
-	        if (array_key_exists('_id', $criteria) && !($criteria["_id"] instanceof MongoId)) {
+	        if (!static::$_custom_id_type && array_key_exists('_id', $criteria) && !($criteria["_id"] instanceof MongoId)) {
 	            $criteria["_id"] = new MongoId($criteria["_id"]);
 	        }
 
