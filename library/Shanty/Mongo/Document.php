@@ -66,7 +66,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		// apply requirements requirement modifiers
 		$this->applyRequirements($this->_config['requirementModifiers'], false);
 
-		if(static::$_custom_id_type !== true) {
+		if(static::$_enforceMongoIdType !== true) {
 			$this->applyRequirements(array('_id' => array('Validator:MongoId')), false);
 		}
 
@@ -82,11 +82,12 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 
 		// Create document id if one is required
 		if ($this->isNewDocument() && ($this->hasKey() || (isset($this->_config['hasId']) && $this->_config['hasId']))) {
-			if(static::$_custom_id_type !== true) {
+			if(static::$_enforceMongoIdType !== true) {
 				$this->_data['_id'] = new MongoId();
 			}
-
-			$this->_data['_type'] = static::getCollectionInheritance(false);
+			if(static::$_requireType === true) {
+				$this->_data['_type'] = static::getCollectionInheritance(false);
+			}
 		}
 
 		// If has key then add it to the update criteria
@@ -1158,9 +1159,11 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 	public function refresh()
 	{
 		$query = array('_id' => $this->getId());
-		$inheritance = static::getCollectionInheritance();
-		if (count($inheritance) > 1) {
-			$query['_type'] = $inheritance[0];
+		if(static::$_requireType === true) {
+			$inheritance = static::getCollectionInheritance();
+			if (count($inheritance) > 1) {
+				$query['_type'] = $inheritance[0];
+			}
 		}
 
 		$data = static::getMongoCollection(false)->findOne($query);
