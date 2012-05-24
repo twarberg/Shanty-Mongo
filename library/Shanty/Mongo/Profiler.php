@@ -12,6 +12,35 @@ require_once 'Shanty/Mongo/Iterator/Default.php';
  */
 class Shanty_Mongo_Profiler extends Zend_Db_Profiler
 {
+    protected $_message = null;
+
+    public function setEnabled($enable)
+    {
+        parent::setEnabled($enable);
+
+        if ($this->getEnabled()) {
+
+            if (!$this->_message) {
+                $this->_message = new Zend_Wildfire_Plugin_FirePhp_TableMessage('MongoDB');
+                $this->_message->setBuffered(true);
+                $this->_message->setHeader(array('Database','Collection','Query', 'Fields'));
+                $this->_message->setDestroy(true);
+                $this->_message->setOption('includeLineNumbers', false);
+                Zend_Wildfire_Plugin_FirePhp::getInstance()->send($this->_message);
+            }
+
+        } else {
+
+            if ($this->_message) {
+                $this->_message->setDestroy(true);
+                $this->_message = null;
+            }
+
+        }
+
+        return $this;
+    }
+
     public function startQuery($config, $queryType = null)
     {
         if(!$this->_enabled)
@@ -50,7 +79,25 @@ class Shanty_Mongo_Profiler extends Zend_Db_Profiler
                     $string[] = $key.': '.$item;
             }
         }
-
+        if($this->_message) {
+            $this->_message->addRow(array($config['database'], $config['collection'], array_key_exists('query', $config) && !empty($config['query']) ? Zend_JSON::encode($config['query']): '', array_key_exists('fields', $config) && !empty($config['fields']) ? Zend_JSON::encode($config['fields']): 'all'));
+        }
         return $this->queryStart(implode(' | ', $string), $queryType);
+    }
+
+    public function queryEnd($queryId)
+    {
+        $state = parent::queryEnd($queryId);
+
+        if (!$this->getEnabled() || $state == self::IGNORED) {
+            return;
+        }
+
+        $this->_message->setDestroy(false);
+    }
+
+    public function setFirePhpEnabled($enabled = true)
+    {
+        $this->_firePhpEnabled = $enabled;
     }
 }
