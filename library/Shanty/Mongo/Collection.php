@@ -448,7 +448,7 @@ abstract class Shanty_Mongo_Collection extends ArrayObject
 	 */
 	public static function create(array $data = array(), $new = true)
 	{
-		if (
+		if(
             isset($data['_type'])
             && is_array($data['_type'])
             && class_exists($data['_type'][0])

@@ -66,7 +66,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 		// apply requirements requirement modifiers
 		$this->applyRequirements($this->_config['requirementModifiers'], false);
 
-		if(static::$_enforceMongoIdType !== true) {
+		if(static::$_enforceMongoIdType === true) {
 			$this->applyRequirements(array('_id' => array('Validator:MongoId')), false);
 		}
 
@@ -82,7 +82,7 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 
 		// Create document id if one is required
 		if ($this->isNewDocument() && ($this->hasKey() || (isset($this->_config['hasId']) && $this->_config['hasId']))) {
-			if(static::$_enforceMongoIdType !== true) {
+			if(static::$_enforceMongoIdType === true) {
 				$this->_data['_id'] = new MongoId();
 			}
 			if(static::$_requireType === true) {
