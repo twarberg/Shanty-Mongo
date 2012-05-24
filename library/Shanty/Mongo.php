@@ -40,6 +40,7 @@ class Shanty_Mongo
 		static::storeRequirement('DocumentSet', new Shanty_Mongo_Validate_Class('Shanty_Mongo_DocumentSet'));
 
 		// Stubs
+		static::storeRequirement('Array', new Shanty_Mongo_Validate_StubTrue());
 		static::storeRequirement('Required', new Shanty_Mongo_Validate_StubTrue());
 		static::storeRequirement('AsReference', new Shanty_Mongo_Validate_StubTrue());
 
