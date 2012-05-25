@@ -14,10 +14,12 @@ require_once 'Shanty/Mongo/Iterator/Cursor.php';
  */
 abstract class Shanty_Mongo_Collection extends ArrayObject
 {
+	protected static $_custom_id_type = false;
 	protected static $_connectionGroup = 'default';
 	protected static $_db = null;
 	protected static $_collection = null;
 	protected static $_requirements = array();
+	protected static $_use_inheritance = false;
 	protected static $_cachedCollectionInheritance = array();
 	protected static $_cachedCollectionRequirements = array();
 	protected static $_documentSetClass = 'Shanty_Mongo_DocumentSet';
