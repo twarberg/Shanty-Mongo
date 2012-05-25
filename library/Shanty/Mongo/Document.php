@@ -653,9 +653,9 @@ class Shanty_Mongo_Document extends Shanty_Mongo_Collection implements ArrayAcce
 
             // Only failover to this if all else fails
 			// Load a document anyway so long as $data is not empty
-			if (!$className && (!empty($data) || is_array($data))) {
-				$className = 'Shanty_Mongo_Document';
-			}
+			// if (!$className && (!empty($data) || is_array($data))) {
+			// 	$className = 'Shanty_Mongo_Document';
+			// }
 
 			if ($className) $docType = 'Shanty_Mongo_Document';
 		}
