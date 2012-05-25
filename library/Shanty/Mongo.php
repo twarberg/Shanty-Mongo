@@ -206,7 +206,6 @@ class Shanty_Mongo
 				return $function($matches, $options);
 			}
 		}
-
 		return null;
 	}
 
